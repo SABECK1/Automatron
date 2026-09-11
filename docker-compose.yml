@@ -1,0 +1,14 @@
+services:
+  discord-bot:
+    image: node:20-alpine
+    container_name: discord-bot
+    restart: unless-stopped
+    working_dir: /app
+    # Mounts your current host folder into /app inside the container
+    volumes:
+      - .:/app
+    # Automatically loads variables from your local .env file
+    env_file:
+      - .env
+    # Installs dependencies and starts the bot whenever the container launches
+    command: sh -c "npm install && node index.js"

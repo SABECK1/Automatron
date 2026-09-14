@@ -58,15 +58,18 @@ client.on('interactionCreate', async (interaction) => {
     };
 
     try {
-        await axios.post(targetWebhook, payload, {
+        // Notice the "const response =" added to the beginning of this line!
+        const response = await axios.post(targetWebhook, payload, {
             headers: {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${N8N_WEBHOOK_AUTH_TOKEN}`
             }
         });
 
-        const replyMessage = response.data.message || 'Task successfully sent to n8n!';
+        // Using optional chaining (?.) just in case response.data is unexpectedly empty
+        const replyMessage = response.data?.message || 'Task successfully sent to n8n!';
         await interaction.editReply(replyMessage);
+
     } catch (error) {
         console.error(`Webhook error for /${commandName}:`, error.message);
         await interaction.editReply('Failed to execute task.');

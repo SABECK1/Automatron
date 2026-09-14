@@ -3,19 +3,26 @@ const { SlashCommandBuilder } = require('discord.js');
 const COMMAND_CONFIG = [
     {
         data: new SlashCommandBuilder()
-            .setName('summarize')
-            .setDescription('Summarize text via n8n')
+            .setName('appointment')
+            .setDescription('Manage your appointments (create, modify, delete)')
             .addStringOption(option =>
-                option.setName('text').setDescription('The text to summarize').setRequired(true)),
-        webhookEnv: 'N8N_SUMMARIZE_WEBHOOK_URL'
-    },
-    {
-        data: new SlashCommandBuilder()
-            .setName('ticket')
-            .setDescription('Create a support ticket')
+                option.setName('action')
+                    .setDescription('What do you want to do?')
+                    .setRequired(true)
+                    .addChoices(
+                        { name: 'Create', value: 'create' },
+                        { name: 'Modify', value: 'modify' },
+                        { name: 'Delete', value: 'delete' }
+                    ))
             .addStringOption(option =>
-                option.setName('issue').setDescription('Describe your issue').setRequired(true)),
-        webhookEnv: 'N8N_TICKET_WEBHOOK_URL'
+                option.setName('title')
+                    .setDescription('Event title (e.g., "Dentist" or "Meeting ID")')
+                    .setRequired(true))
+            .addStringOption(option =>
+                option.setName('time')
+                    .setDescription('Date/Time (required for create/modify, e.g., "2026-10-15 14:00")')
+                    .setRequired(false)),
+        webhookEnv: 'N8N_APPOINTMENT_WEBHOOK_URL'
     }
 ];
 

@@ -65,7 +65,8 @@ client.on('interactionCreate', async (interaction) => {
             }
         });
 
-        await interaction.editReply('Task successfully sent to n8n!');
+        const replyMessage = response.data.message || 'Task successfully sent to n8n!';
+        await interaction.editReply(replyMessage);
     } catch (error) {
         console.error(`Webhook error for /${commandName}:`, error.message);
         await interaction.editReply('Failed to execute task.');

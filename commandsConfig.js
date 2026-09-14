@@ -25,6 +25,14 @@ const COMMAND_CONFIG = [
             .addStringOption(option =>
                 option.setName('endtime')
                     .setDescription('Date/Time (required for create/modify, e.g., "2026-10-15 15:00")')
+                    .setRequired(false))
+            .addStringOption(option =>
+                option.setName('description')
+                    .setDescription('Optional description for the appointment')
+                    .setRequired(false))
+            .addStringOption(option =>
+                option.setName('location')
+                    .setDescription('Optional location for the appointment')
                     .setRequired(false)),
         webhookEnv: 'N8N_APPOINTMENT_WEBHOOK_URL'
     }

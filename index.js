@@ -1,88 +1,75 @@
 require('dotenv').config();
-
 const { Client, GatewayIntentBits } = require('discord.js');
 const axios = require('axios');
+const COMMAND_CONFIG = require('./commandsConfig');
 
 const {
     DISCORD_BOT_TOKEN,
-    N8N_WEBHOOK_URL,
     N8N_WEBHOOK_AUTH_TOKEN,
     TARGET_CHANNEL_ID = ''
 } = process.env;
 
-if (!DISCORD_BOT_TOKEN || !N8N_WEBHOOK_URL || !N8N_WEBHOOK_AUTH_TOKEN) {
-    throw new Error(
-        'DISCORD_BOT_TOKEN, N8N_WEBHOOK_URL, and N8N_WEBHOOK_AUTH_TOKEN must be set in .env'
-    );
-}
-
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
-});
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
 });
 
-client.on('messageCreate', async (message) => {
-    if (message.author.bot) return;
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
 
-    // An empty target channel means that messages from every channel are accepted.
-    if (TARGET_CHANNEL_ID && message.channel.id !== TARGET_CHANNEL_ID) return;
+    // Check if a target channel is enforced
+    if (TARGET_CHANNEL_ID && interaction.channelId !== TARGET_CHANNEL_ID) {
+        return interaction.reply({
+            content: `This command can only be used in <#${TARGET_CHANNEL_ID}>.`,
+            ephemeral: true
+        });
+    }
 
-    const messageData = {
-        content: message.content,
-        author: {
-            id: message.author.id,
-            username: message.author.username,
-            displayName: message.author.displayName || message.author.username
+    const commandName = interaction.commandName;
+    const commandConfig = COMMAND_CONFIG.find(c => c.data.name === commandName);
+
+    if (!commandConfig) {
+        return interaction.reply({ content: 'Unknown command.', ephemeral: true });
+    }
+
+    const targetWebhook = process.env[commandConfig.webhookEnv];
+    if (!targetWebhook) {
+        return interaction.reply({ content: 'Webhook URL not configured for this command.', ephemeral: true });
+    }
+
+    await interaction.deferReply();
+
+    const options = {};
+    interaction.options.data.forEach(opt => {
+        options[opt.name] = opt.value;
+    });
+
+    const payload = {
+        command: commandName,
+        options: options,
+        user: {
+            id: interaction.user.id,
+            username: interaction.user.username,
+            displayName: interaction.user.displayName
         },
-        channel: {
-            id: message.channel.id,
-            name: message.channel.name
-        },
-        guild: message.guild
-            ? {
-                id: message.guild.id,
-                name: message.guild.name
-            }
-            : null,
-        timestamp: message.createdAt.toISOString(),
-        messageId: message.id,
-        attachments: message.attachments.map((attachment) => ({
-            id: attachment.id,
-            filename: attachment.name,
-            url: attachment.url,
-            contentType: attachment.contentType
-        }))
+        channelId: interaction.channelId,
+        guildId: interaction.guildId
     };
 
     try {
-        console.log(`Forwarding message ${message.id} to n8n...`);
-
-        const response = await axios.post(N8N_WEBHOOK_URL, messageData, {
+        await axios.post(targetWebhook, payload, {
             headers: {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${N8N_WEBHOOK_AUTH_TOKEN}`
             }
         });
 
-        if (response.status >= 200 && response.status < 300) {
-            console.log(`Message sent to n8n: ${message.content.substring(0, 50)}...`);
-        }
+        await interaction.editReply('Task successfully sent to n8n!');
     } catch (error) {
-        console.error('Webhook error:', {
-            message: error.message,
-            status: error.response?.status,
-            response: error.response?.data
-        });
+        console.error(`Webhook error for /${commandName}:`, error.message);
+        await interaction.editReply('Failed to execute task.');
     }
 });
-
-client.on('error', console.error);
 
 client.login(DISCORD_BOT_TOKEN);

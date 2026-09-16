@@ -58,7 +58,6 @@ client.on('interactionCreate', async (interaction) => {
     };
 
     try {
-        // Notice the "const response =" added to the beginning of this line!
         const response = await axios.post(targetWebhook, payload, {
             headers: {
                 'Content-Type': 'application/json',
@@ -66,8 +65,11 @@ client.on('interactionCreate', async (interaction) => {
             }
         });
 
-        // Using optional chaining (?.) just in case response.data is unexpectedly empty
-        const replyMessage = response.data?.message || 'Task successfully sent to n8n!';
+        // Handle plain text strings OR JSON objects seamlessly
+        const replyMessage = typeof response.data === 'string'
+            ? response.data
+            : (response.data?.message || 'Task successfully sent to n8n!');
+
         await interaction.editReply(replyMessage);
 
     } catch (error) {
